@@ -10,9 +10,11 @@ import {
 } from './decorators/injectable';
 import { getInjectionParamFactories } from './decorators/injectArgFactory';
 
-type Func = (...args: unknown[]) => unknown;
-type FunctionProperties<T> = { [K in keyof T as T[K] extends Func ? K : never]: T[K] };
-type FunctionPropertyNames<T> = keyof FunctionProperties<T>;
+export type Func = (...args: unknown[]) => unknown;
+export type FunctionProperties<T> = {
+  [K in keyof T as T[K] extends Func ? K : never]: T[K];
+};
+export type FunctionPropertyNames<T> = keyof FunctionProperties<T>;
 
 export type DebugInfo = {
   className?: string;
@@ -108,12 +110,6 @@ export class Injector {
       throw new NotInjectableError(TargetClass, debug);
     }
 
-    const existing = this.getExisting(TargetClass);
-
-    if (existing) {
-      return existing;
-    }
-
     let existingInjectableDescription = getInjectableOptions(TargetClass) ?? {
       mode: 'singleton',
       imports: [],
@@ -121,12 +117,27 @@ export class Injector {
     };
     const useFactory =
       mergeInjectableDescription?.useFactory ?? existingInjectableDescription.useFactory;
+    const useGuard =
+      mergeInjectableDescription?.useGuard ?? existingInjectableDescription.useGuard;
 
     if (mergeInjectableDescription) {
       existingInjectableDescription = this.mergeInjectableDescriptions(
         existingInjectableDescription,
         mergeInjectableDescription,
       );
+    }
+
+    const existing = this.getExisting(TargetClass);
+
+    if (existing) {
+      if (useGuard) {
+        if (useGuard(existing, existingInjectableDescription)) {
+          return existing;
+        }
+        return null as T;
+      }
+
+      return existing;
     }
 
     // eslint-disable-next-line init-declarations
@@ -308,6 +319,7 @@ export class Injector {
         ...mergeInjectableDescription?.provides,
       },
       useFactory: mergeInjectableDescription?.useFactory,
+      useGuard: mergeInjectableDescription?.useGuard,
     };
   }
 }

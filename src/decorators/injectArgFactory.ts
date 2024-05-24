@@ -6,7 +6,7 @@ import FunctionPropertyNames = jest.FunctionPropertyNames;
 
 const injectionTypeArgMarker = Symbol.for('wdxlab.di.decorators.injection.type');
 
-export type FactoryData = {
+type FactoryData = {
   key: number;
   factory: InjectionFactoryFn;
 };

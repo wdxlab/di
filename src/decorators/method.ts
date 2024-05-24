@@ -8,7 +8,7 @@ export type MethodInfo = {
   meta?: unknown;
 };
 
-export type MethodInfoMap = Map<string | number | symbol, MethodInfo>;
+type MethodInfoMap = Map<string | number | symbol, MethodInfo>;
 
 export function Method(meta?: unknown): MethodDecorator {
   return (target, key, descriptor) => {

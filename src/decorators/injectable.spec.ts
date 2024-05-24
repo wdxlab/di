@@ -60,3 +60,57 @@ test('useFactory', () => {
   expect(foo.bar.some).toBe(123);
   expect(foo.fooed).toBe(true);
 });
+
+test('useGuard', () => {
+  @Injectable()
+  class Bar {
+    constructor(
+      @InjectArg('some')
+      readonly some: number,
+    ) {}
+  }
+
+  @Injectable({
+    useGuard(exising, decl) {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      return counter < 2 || !!(exising && decl.provides?.ok);
+    },
+    useFactory(decl) {
+      const instance = Injector.instantiate(Foo, decl);
+      instance.foo();
+      return instance;
+    },
+  })
+  class Foo {
+    fooed: boolean = false;
+
+    constructor(readonly bar: Bar) {}
+
+    foo(): void {
+      this.fooed = true;
+    }
+  }
+
+  let counter = 0;
+  const foo = Injector.instantiate(Foo, {
+    imports: [{ injectable: Bar, provides: { some: 123 } }],
+  });
+
+  expect(foo.bar.some).toBe(123);
+  expect(foo.fooed).toBe(true);
+
+  counter++;
+  expect(Injector.instantiate(Foo)).toStrictEqual(foo);
+
+  counter++;
+  expect(Injector.instantiate(Foo)).toStrictEqual(null);
+  expect(Injector.instantiate(Foo)).toStrictEqual(null);
+
+  counter = 1;
+  expect(Injector.instantiate(Foo)).toStrictEqual(foo);
+
+  counter = 2;
+  expect(Injector.instantiate(Foo, { provides: { ok: false } })).toStrictEqual(null);
+  expect(Injector.instantiate(Foo, { provides: { ok: true } })).toStrictEqual(foo);
+});

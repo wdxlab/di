@@ -17,6 +17,7 @@ export type InjectableDescription = {
   imports?: Array<DynamicInjectable>;
   provides?: { [key: string | symbol]: unknown };
   useFactory?: ((declaration: InjectableDescription) => unknown) | false;
+  useGuard?: ((instance: unknown, declaration: InjectableDescription) => boolean) | false;
 };
 
 export function Injectable(description?: InjectableDescription): ClassDecorator {
