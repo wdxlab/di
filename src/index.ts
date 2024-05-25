@@ -6,6 +6,7 @@ export {
   Injectable,
   InjectArgFactory,
   getMethods,
+  getMethodInfo,
   isInjectable,
   getInjectionParamFactories,
   getInjectableOptions,
@@ -23,4 +24,6 @@ export {
   type FunctionProperties,
   type FunctionPropertyNames,
   type Func,
+  ArgumentsOf,
+  ReturnTypeOf,
 } from './injector';

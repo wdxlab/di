@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/ban-types */
 
-import { getMethods } from './decorators';
+import { getMethodInfo } from './decorators';
 import {
   Constructor,
   DynamicInjectable,
@@ -16,6 +16,12 @@ export type FunctionProperties<T> = {
   [K in keyof T as T[K] extends Func ? K : never]: T[K];
 };
 export type FunctionPropertyNames<T> = keyof FunctionProperties<T>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type ArgumentsOf<T> = T extends (...args: infer A) => any ? A : never;
+export type ReturnTypeOf<
+  T,
+  K extends FunctionPropertyNames<T>,
+> = FunctionProperties<T>[K] extends Func ? ReturnType<FunctionProperties<T>[K]> : never;
 
 export type DebugInfo = {
   className?: string;
@@ -168,7 +174,7 @@ export class Injector {
   ): FunctionProperties<T>[K] extends Func
     ? ReturnType<FunctionProperties<T>[K]>
     : never {
-    const methodInfo = getMethods(target).get(methodName);
+    const methodInfo = getMethodInfo(target, methodName);
 
     if (!methodInfo) {
       throw new Error(
@@ -181,7 +187,11 @@ export class Injector {
       mergeInjectableDescription,
     );
 
-    const args = this.resolveArgs(target, methodName, injectableDescription);
+    const args = this.resolveArgs(
+      target,
+      methodName,
+      injectableDescription,
+    ) as ArgumentsOf<T[K]>;
 
     if (methodInfo?.options?.useGuard) {
       if (!methodInfo.options.useGuard(target, args, injectableDescription)) {

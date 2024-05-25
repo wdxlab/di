@@ -2,35 +2,49 @@ import { getMethods, Method } from './method';
 import { Injector } from '../injector';
 import { InjectArg } from './injectArg';
 
-it('should work', () => {
-  class Foo {
-    fooMethod(): void {}
+class Foo {
+  fooMethod(): void {}
 
-    @Method()
-    barMethod(): void {}
+  @Method()
+  barMethod(): void {}
 
-    @Method({ meta: 'meta' })
-    bazMethod(): void {}
+  @Method({ meta: 'meta' })
+  bazMethod(): void {}
 
-    @Method<Foo, []>({
-      useGuard: (instance, args, decl) => {
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore
-        return instance.fooMethod && args[1] === 'ok' && decl.provides?.ok === true;
-      },
-    })
-    guardedMethod(
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      @InjectArg('foo') foo: undefined,
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      @InjectArg('bar') bar: unknown,
-    ): number {
-      return 123;
-    }
+  @Method<Foo, 'guardedMethod'>({
+    useGuard: (instance, args, decl) => {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      return instance.fooMethod && args[1] === 'ok' && decl.provides?.ok === true;
+    },
+  })
+  guardedMethod(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    @InjectArg('foo') foo: string,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    @InjectArg('bar') bar: number,
+  ): number {
+    return 123;
   }
 
+  @Method<Foo, 'directCallMethod'>({
+    onDirectCall: (a, b) =>
+      a === 'ok' && b === 'ok'
+        ? `direct call, ${a}, ${b}`
+        : `direct call and not ok, ${a}, ${b}`,
+  })
+  directCallMethod(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    @InjectArg('a') a: string,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    @InjectArg('b') b: string,
+  ): boolean | string {
+    return `hooked, ${a}, ${b}`;
+  }
+}
+
+test('useGuard', () => {
   const foo = new Foo();
-  const methods = getMethods(foo);
 
   expect(Injector.callMethod(foo, 'guardedMethod')).toBe(null);
   expect(
@@ -38,6 +52,25 @@ it('should work', () => {
       provides: { foo: 1, bar: 'ok', ok: true },
     }),
   ).toBe(123);
+});
+
+test('onDirectCall', () => {
+  const foo = new Foo();
+  expect(Injector.callMethod(foo, 'directCallMethod')).toBe(
+    'hooked, undefined, undefined',
+  );
+  expect(
+    Injector.callMethod(foo, 'directCallMethod', {
+      provides: { a: 'ok', b: 'ok' },
+    }),
+  ).toBe('hooked, ok, ok');
+  expect(foo.directCallMethod('ok', 'ok')).toBe('direct call, ok, ok');
+  expect(foo.directCallMethod('foo', 'bar')).toBe('direct call and not ok, foo, bar');
+});
+
+test('getMethods', () => {
+  const foo = new Foo();
+  const methods = getMethods(foo);
 
   expect([...methods]).toEqual([
     [
@@ -71,6 +104,20 @@ it('should work', () => {
           Object.getPrototypeOf(foo),
           'guardedMethod',
         ),
+      },
+    ],
+    [
+      'directCallMethod',
+      {
+        name: 'directCallMethod',
+        options: { onDirectCall: expect.any(Function) },
+        descriptor: {
+          ...Object.getOwnPropertyDescriptor(
+            Object.getPrototypeOf(foo),
+            'directCallMethod',
+          ),
+          value: expect.any(Function),
+        },
       },
     ],
   ]);
