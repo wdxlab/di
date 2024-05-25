@@ -10,7 +10,8 @@ import {
 } from './decorators/injectable';
 import { getInjectionParamFactories } from './decorators/injectArgFactory';
 
-export type Func = (...args: unknown[]) => unknown;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type Func = (...args: any[]) => any;
 export type FunctionProperties<T> = {
   [K in keyof T as T[K] extends Func ? K : never]: T[K];
 };
@@ -179,7 +180,15 @@ export class Injector {
       this.instanceInjectableDescription.get(target),
       mergeInjectableDescription,
     );
+
     const args = this.resolveArgs(target, methodName, injectableDescription);
+
+    if (methodInfo?.options?.useGuard) {
+      if (!methodInfo.options.useGuard(target, args, injectableDescription)) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return null as any;
+      }
+    }
 
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore

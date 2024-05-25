@@ -1,6 +1,6 @@
 {
   "name": "@wdxlab/di",
-  "version": "1.0.0-alpha.3",
+  "version": "1.0.0-alpha.4",
   "description": "Dependency Injection for TypeScript",
   "main": "dist/cjs",
   "module": "dist/esm",
@@ -11,6 +11,9 @@
     "LICENSE.md",
     "dist"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "npm run build:es6 && npm run build:cjs && npm run build:types",
     "build:es6": "swc ./src -C module.type=es6 -d dist/es6 --strip-leading-paths",

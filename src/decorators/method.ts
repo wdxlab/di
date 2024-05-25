@@ -1,27 +1,41 @@
 import 'reflect-metadata';
+import { InjectableDescription } from './injectable';
 
 const methodsMarker = Symbol.for('wdxlab.di.decorators.methods');
 
-export type MethodInfo = {
+export type MethodInfo<T, A extends readonly unknown[]> = {
   name: string;
-  descriptor: TypedPropertyDescriptor<(...args: unknown[]) => unknown>;
+  descriptor: TypedPropertyDescriptor<(...args: A) => unknown>;
+  options?: MethodOptions<T, A>;
+};
+
+type MethodInfoMap = Map<string | number | symbol, MethodInfo<unknown, unknown[]>>;
+
+export type MethodGuard<T, A extends readonly unknown[]> = (
+  instance: T,
+  args: A,
+  decl: InjectableDescription,
+) => boolean;
+export type MethodOptions<T, A extends readonly unknown[]> = {
+  useGuard?: MethodGuard<T, A>;
   meta?: unknown;
 };
 
-type MethodInfoMap = Map<string | number | symbol, MethodInfo>;
-
-export function Method(meta?: unknown): MethodDecorator {
+export function Method<T, A extends readonly unknown[]>(
+  options?: MethodOptions<T, A>,
+): MethodDecorator {
   return (target, key, descriptor) => {
-    const data: MethodInfo = {
+    const data: MethodInfo<T, A> = {
       name: key as string,
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       descriptor: descriptor,
-      meta,
+      options,
     };
     const existing: MethodInfoMap =
       Reflect.getMetadata(methodsMarker, target) ?? new Map();
-    existing.set(data.name, data);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    existing.set(data.name, data as any);
     Reflect.defineMetadata(methodsMarker, existing, target);
   };
 }

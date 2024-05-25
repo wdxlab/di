@@ -1,5 +1,7 @@
 export {
   Method,
+  MethodGuard,
+  MethodOptions,
   InjectArg,
   Injectable,
   InjectArgFactory,
