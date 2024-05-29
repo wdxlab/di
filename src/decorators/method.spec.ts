@@ -1,7 +1,9 @@
 import { getMethods, Method } from './method';
 import { Injector } from '../injector';
 import { InjectArg } from './injectArg';
+import { Injectable } from './injectable';
 
+@Injectable()
 class Foo {
   fooMethod(): void {}
 
@@ -43,6 +45,8 @@ class Foo {
   }
 }
 
+beforeEach(() => Injector.clear());
+
 test('useGuard', () => {
   const foo = new Foo();
 
@@ -55,7 +59,7 @@ test('useGuard', () => {
 });
 
 test('onDirectCall', () => {
-  const foo = new Foo();
+  const foo = Injector.instantiate(Foo)!;
   expect(Injector.callMethod(foo, 'directCallMethod')).toBe(
     'hooked, undefined, undefined',
   );
@@ -65,6 +69,9 @@ test('onDirectCall', () => {
     }),
   ).toBe('hooked, ok, ok');
   expect(foo.directCallMethod('ok', 'ok')).toBe('direct call, ok, ok');
+  expect(Injector.instantiate(Foo)!.directCallMethod('ok', 'ok')).toBe(
+    'direct call, ok, ok',
+  );
   expect(foo.directCallMethod('foo', 'bar')).toBe('direct call and not ok, foo, bar');
 });
 

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/ban-types */
 
-import { getMethodInfo } from './decorators';
+import { ConstructorResult, getMethodInfo, MapToConstructor } from './decorators';
 import {
   Constructor,
   DynamicInjectable,
@@ -56,8 +56,11 @@ export class NotInjectableError extends Error {
 }
 
 export class Injector {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  protected instanceInjectableDescription = new WeakMap<any, InjectableDescription>();
+  protected instanceInjectableDescription = new WeakMap<
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    any,
+    InjectableDescription<Constructor<unknown>>
+  >();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   protected singletonStorage = new Map<Constructor<unknown>, any>();
@@ -70,19 +73,19 @@ export class Injector {
     return this.instance;
   }
 
-  static instantiate<T>(
-    module: Constructor<T>,
-    mergeInjectableDescription?: InjectableDescription,
-  ): T {
+  static instantiate<T extends Constructor<unknown>>(
+    module: T,
+    mergeInjectableDescription?: InjectableDescription<T>,
+  ): ConstructorResult<T> | null {
     return this.getInstance().instantiate(module, mergeInjectableDescription);
   }
 
   static callMethod<T, K extends FunctionPropertyNames<T>>(
     target: T,
     methodName: K,
-    mergeInjectableDescription?: InjectableDescription,
+    mergeInjectableDescription?: InjectableDescription<Constructor<T>>,
   ): FunctionProperties<T>[K] extends Func
-    ? ReturnType<FunctionProperties<T>[K]>
+    ? ReturnType<FunctionProperties<T>[K]> | null
     : never {
     return this.getInstance().callMethod(target, methodName, mergeInjectableDescription);
   }
@@ -94,7 +97,7 @@ export class Injector {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   static fn<T extends (...args: any[]) => unknown>(
     fn: T,
-    params: Array<Constructor<unknown> | DynamicInjectable>,
+    params: Array<Constructor<unknown> | DynamicInjectable<Constructor<unknown>>>,
   ): () => ReturnType<T> {
     return this.getInstance().fn(fn, params);
   }
@@ -108,11 +111,12 @@ export class Injector {
 
   protected constructor() {}
 
-  protected instantiate<T>(
-    TargetClass: Constructor<T>,
-    mergeInjectableDescription?: InjectableDescription,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  protected instantiate<T extends Constructor<any>>(
+    TargetClass: T,
+    mergeInjectableDescription?: InjectableDescription<T>,
     debug?: DebugInfo,
-  ): T {
+  ): ConstructorResult<T> | null {
     if (!isInjectable(TargetClass)) {
       throw new NotInjectableError(TargetClass, debug);
     }
@@ -122,10 +126,8 @@ export class Injector {
       imports: [],
       provides: {},
     };
-    const useFactory =
-      mergeInjectableDescription?.useFactory ?? existingInjectableDescription.useFactory;
-    const useGuard =
-      mergeInjectableDescription?.useGuard ?? existingInjectableDescription.useGuard;
+    const useFactory = existingInjectableDescription.useFactory;
+    const useGuard = existingInjectableDescription.useGuard;
 
     if (mergeInjectableDescription) {
       existingInjectableDescription = this.mergeInjectableDescriptions(
@@ -141,23 +143,31 @@ export class Injector {
         if (useGuard(existing, existingInjectableDescription)) {
           return existing;
         }
-        return null as T;
+
+        return null;
       }
 
       return existing;
     }
 
-    // eslint-disable-next-line init-declarations
-    let instance: T;
+    if (useGuard) {
+      if (!useGuard(null, existingInjectableDescription)) {
+        return null;
+      }
+    }
+
+    let instance: ConstructorResult<T> | null;
 
     if (useFactory) {
       instance = useFactory({
         ...existingInjectableDescription,
-        useFactory: false,
-      }) as T;
+      });
+
+      if (instance === null) {
+        return null;
+      }
     } else {
       const args = this.resolveArgs(TargetClass, existingInjectableDescription);
-
       instance = new TargetClass(...args);
     }
 
@@ -170,9 +180,9 @@ export class Injector {
   protected callMethod<T, K extends FunctionPropertyNames<T>>(
     target: T,
     methodName: K,
-    mergeInjectableDescription?: InjectableDescription,
+    mergeInjectableDescription?: InjectableDescription<Constructor<T>>,
   ): FunctionProperties<T>[K] extends Func
-    ? ReturnType<FunctionProperties<T>[K]>
+    ? ReturnType<FunctionProperties<T>[K]> | null
     : never {
     const methodInfo = getMethodInfo(target, methodName);
 
@@ -187,11 +197,7 @@ export class Injector {
       mergeInjectableDescription,
     );
 
-    const args = this.resolveArgs(
-      target,
-      methodName,
-      injectableDescription,
-    ) as ArgumentsOf<T[K]>;
+    const args = this.resolveArgs(target, methodName, injectableDescription);
 
     if (methodInfo?.options?.useGuard) {
       if (!methodInfo.options.useGuard(target, args, injectableDescription)) {
@@ -212,7 +218,7 @@ export class Injector {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   protected fn<T extends (...args: any[]) => any>(
     fn: T,
-    params: Array<Constructor<unknown> | DynamicInjectable>,
+    params: Array<Constructor<unknown> | DynamicInjectable<Constructor<unknown>>>,
   ): () => ReturnType<T> {
     return () => {
       const args = params.map((param) => {
@@ -227,7 +233,9 @@ export class Injector {
     };
   }
 
-  protected getParams(clazz: Constructor<unknown>): Constructor<unknown>[];
+  protected getParams<T extends Constructor<unknown>>(
+    clazz: T,
+  ): MapToConstructor<ConstructorParameters<T>>;
   protected getParams<T, K extends FunctionPropertyNames<T>>(
     instance: T,
     propertyName: K,
@@ -246,7 +254,9 @@ export class Injector {
     return Reflect.getMetadata('design:paramtypes', clazzOrInstance) ?? [];
   }
 
-  protected getExisting<T>(Module: Constructor<T>): T | null {
+  protected getExisting<T extends Constructor<unknown>>(
+    Module: T,
+  ): ConstructorResult<T> | null {
     const options = getInjectableOptions(Module);
 
     if (options?.mode === 'singleton') {
@@ -264,21 +274,20 @@ export class Injector {
     }
   }
 
-  protected resolveArgs(
-    Module: Constructor<unknown>,
-    mergeInjectableDescription?: InjectableDescription,
-  ): Array<unknown>;
+  protected resolveArgs<T extends Constructor<unknown>>(
+    Module: T,
+    mergeInjectableDescription?: InjectableDescription<Constructor<unknown>>,
+  ): ConstructorParameters<T>;
 
   protected resolveArgs<T, K extends FunctionPropertyNames<T>>(
     instance: T,
     methodName: K,
-    mergeInjectableDescription?: InjectableDescription,
-  ): Array<unknown>;
-
-  protected resolveArgs(
-    Module: Constructor<unknown> | {},
-    methodName?: string | number | symbol | InjectableDescription,
-    mergeInjectableDescription?: InjectableDescription,
+    mergeInjectableDescription?: InjectableDescription<Constructor<T>>,
+  ): ArgumentsOf<T[K]>;
+  protected resolveArgs<T extends Constructor<unknown>>(
+    Module: T | ConstructorResult<T>,
+    methodName?: string | number | symbol | InjectableDescription<Constructor<unknown>>,
+    mergeInjectableDescription?: InjectableDescription<Constructor<unknown>>,
   ): Array<unknown> {
     if (methodName && typeof methodName === 'object') {
       mergeInjectableDescription = methodName;
@@ -286,15 +295,19 @@ export class Injector {
     }
     const params =
       typeof Module === 'function'
-        ? this.getParams(Module as Constructor<unknown>)
-        : this.getParams(Module, methodName as keyof typeof Module);
+        ? this.getParams(Module as T)
+        : // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          this.getParams(Module, methodName as any);
     const injectionFactoryMap =
       typeof Module === 'function'
-        ? getInjectionParamFactories(Module as Constructor<unknown>)
-        : getInjectionParamFactories(Module, methodName as keyof typeof Module);
+        ? getInjectionParamFactories(Module as T)
+        : // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          getInjectionParamFactories(Module, methodName as any);
 
     return params.map((p, ix) => {
       const debug: DebugInfo = {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
         className: typeof Module === 'function' ? Module.name : Module.constructor.name,
         methodName: methodName,
         paramIx: ix,
@@ -325,9 +338,9 @@ export class Injector {
   }
 
   protected mergeInjectableDescriptions(
-    existingInjectableDescription?: InjectableDescription,
-    mergeInjectableDescription?: InjectableDescription,
-  ): InjectableDescription {
+    existingInjectableDescription?: InjectableDescription<Constructor<unknown>>,
+    mergeInjectableDescription?: InjectableDescription<Constructor<unknown>>,
+  ): InjectableDescription<Constructor<unknown>> {
     return {
       imports: [
         ...(mergeInjectableDescription?.imports ?? []),
@@ -337,8 +350,8 @@ export class Injector {
         ...existingInjectableDescription?.provides,
         ...mergeInjectableDescription?.provides,
       },
-      useFactory: mergeInjectableDescription?.useFactory,
-      useGuard: mergeInjectableDescription?.useGuard,
+      useFactory: existingInjectableDescription?.useFactory,
+      useGuard: existingInjectableDescription?.useGuard,
     };
   }
 }

@@ -12,6 +12,8 @@ export {
   getInjectableOptions,
   type InjectableDescription,
   type Constructor,
+  type ConstructorResult,
+  type MapToConstructor,
   type Mode,
   type InjectionFactoryFn,
   type MethodInfo,

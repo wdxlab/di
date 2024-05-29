@@ -17,8 +17,8 @@ test('singleton', () => {
     ) {}
   }
 
-  const baz1 = Injector.instantiate(Baz);
-  const baz2 = Injector.instantiate(Baz);
+  const baz1 = Injector.instantiate(Baz)!;
+  const baz2 = Injector.instantiate(Baz)!;
 
   expect(baz1).toBeInstanceOf(Baz);
   expect(baz2).toBeInstanceOf(Baz);
@@ -28,37 +28,80 @@ test('singleton', () => {
   expect(baz1.bar).not.toBe(baz2.bar);
 });
 
-test('useFactory', () => {
-  @Injectable()
-  class Bar {
-    constructor(
-      @InjectArg('some')
-      readonly some: number,
-    ) {}
-  }
-
-  @Injectable()
-  class Foo {
-    fooed: boolean = false;
-
-    constructor(readonly bar: Bar) {}
-
-    foo(): void {
-      this.fooed = true;
+describe('useFactory', () => {
+  it('should work', () => {
+    @Injectable()
+    class Bar {
+      constructor(readonly some: number) {}
     }
-  }
 
-  const foo = Injector.instantiate(Foo, {
-    imports: [{ injectable: Bar, provides: { some: 123 } }],
-    useFactory(decl) {
-      const instance = Injector.instantiate(Foo, decl);
-      instance.foo();
-      return instance;
-    },
+    @Injectable<typeof Foo>({
+      useFactory(decl) {
+        const instance = new Foo(new Bar(decl.provides?.forBar as number));
+        instance.foo();
+        return instance;
+      },
+    })
+    class Foo {
+      fooed: boolean = false;
+
+      constructor(readonly bar: Bar) {}
+
+      foo(): void {
+        this.fooed = true;
+      }
+    }
+
+    const foo = Injector.instantiate(Foo, {
+      provides: {
+        forBar: 123,
+      },
+    })!;
+
+    expect(foo.bar.some).toBe(123);
+    expect(foo.fooed).toBe(true);
   });
 
-  expect(foo.bar.some).toBe(123);
-  expect(foo.fooed).toBe(true);
+  it('should return null if no instance', () => {
+    @Injectable()
+    class Bar {
+      constructor(readonly some: number) {}
+    }
+
+    @Injectable<typeof Foo>({
+      useFactory(decl) {
+        if (decl.provides?.ok) {
+          const instance = new Foo(new Bar(decl.provides?.forBar as number));
+          instance.foo((decl.provides?.ok as string | undefined) ?? '');
+          return instance;
+        }
+
+        return null;
+      },
+    })
+    class Foo {
+      fooed: string = '';
+
+      constructor(readonly bar: Bar) {}
+
+      foo(value: string): void {
+        this.fooed = value;
+      }
+    }
+
+    expect(
+      Injector.instantiate(Foo, {
+        imports: [{ injectable: Bar, provides: { some: 123 } }],
+      }),
+    ).toBeNull();
+
+    const foo = Injector.instantiate(Foo, {
+      provides: { ok: 'ok', forBar: 123 },
+    })!;
+
+    expect(foo.bar.some).toBe(123);
+    expect(foo.fooed).toBe('ok');
+  });
 });
 
 test('useGuard', () => {
@@ -70,16 +113,11 @@ test('useGuard', () => {
     ) {}
   }
 
-  @Injectable({
+  @Injectable<typeof Foo>({
     useGuard(exising, decl) {
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       return counter < 2 || !!(exising && decl.provides?.ok);
-    },
-    useFactory(decl) {
-      const instance = Injector.instantiate(Foo, decl);
-      instance.foo();
-      return instance;
     },
   })
   class Foo {
@@ -95,10 +133,7 @@ test('useGuard', () => {
   let counter = 0;
   const foo = Injector.instantiate(Foo, {
     imports: [{ injectable: Bar, provides: { some: 123 } }],
-  });
-
-  expect(foo.bar.some).toBe(123);
-  expect(foo.fooed).toBe(true);
+  })!;
 
   counter++;
   expect(Injector.instantiate(Foo)).toStrictEqual(foo);

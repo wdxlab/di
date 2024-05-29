@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import { InjectableDescription } from './injectable';
+import { Constructor, InjectableDescription } from './injectable';
 import { ArgumentsOf, Func, FunctionPropertyNames, ReturnTypeOf } from '../injector';
 
 const methodsMarker = Symbol.for('wdxlab.di.decorators.methods');
@@ -18,7 +18,7 @@ type MethodInfoMap = Map<
 export type MethodGuard<T, K extends FunctionPropertyNames<T>> = (
   instance: T,
   args: ArgumentsOf<T[K]>,
-  decl: InjectableDescription,
+  decl: InjectableDescription<Constructor<T>>,
 ) => boolean;
 export type MethodOptions<T, K extends FunctionPropertyNames<T>> = {
   useGuard?: MethodGuard<T, K>;

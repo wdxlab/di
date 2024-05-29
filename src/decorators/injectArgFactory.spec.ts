@@ -17,7 +17,7 @@ it('should work', () => {
     ) {}
   }
 
-  const foo = Injector.instantiate(Foo);
+  const foo = Injector.instantiate(Foo)!;
 
   expect(foo.inj.some).toBe(123);
 });

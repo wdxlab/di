@@ -1,24 +1,26 @@
 /* eslint-disable @typescript-eslint/ban-types */
 import 'reflect-metadata';
 
-import { Constructor, InjectableDescription } from './injectable';
+import { Constructor, ConstructorResult, InjectableDescription } from './injectable';
 import FunctionPropertyNames = jest.FunctionPropertyNames;
 
 const injectionTypeArgMarker = Symbol.for('wdxlab.di.decorators.injection.type');
 
-type FactoryData = {
+type FactoryData<T extends Constructor<unknown>> = {
   key: number;
-  factory: InjectionFactoryFn;
+  factory: InjectionFactoryFn<T>;
 };
 
-export type InjectionFactoryFn = (
-  descriptor: InjectableDescription,
-  target: Constructor<unknown>,
+export type InjectionFactoryFn<T extends Constructor<unknown>> = (
+  descriptor: InjectableDescription<T>,
+  target: T,
 ) => unknown;
 
-export function InjectArgFactory(factory: InjectionFactoryFn): ParameterDecorator {
+export function InjectArgFactory<T extends Constructor<unknown>>(
+  factory: InjectionFactoryFn<T>,
+): ParameterDecorator {
   return (target, propertyKey, parameterIndex) => {
-    const existing: FactoryData[] =
+    const existing: FactoryData<T>[] =
       Reflect.getMetadata(injectionTypeArgMarker, target, propertyKey!) ?? [];
 
     existing.push({ key: parameterIndex, factory });
@@ -28,23 +30,22 @@ export function InjectArgFactory(factory: InjectionFactoryFn): ParameterDecorato
 
 export function getInjectionParamFactories(
   target: Constructor<unknown>,
-): Map<number, InjectionFactoryFn>;
+): Map<number, InjectionFactoryFn<Constructor<unknown>>>;
 export function getInjectionParamFactories<T, K extends FunctionPropertyNames<T>>(
   target: T,
   key: K,
-): Map<number, InjectionFactoryFn>;
-export function getInjectionParamFactories(
-  target: Constructor<unknown> | {},
+): Map<number, InjectionFactoryFn<Constructor<unknown>>>;
+export function getInjectionParamFactories<T extends Constructor<unknown>>(
+  target: T | ConstructorResult<T>,
   key?: string | symbol | number,
-): Map<number, InjectionFactoryFn> {
-  let params: FactoryData[] = [];
+): Map<number, InjectionFactoryFn<Constructor<unknown>>> {
+  let params: FactoryData<Constructor<unknown>>[] = [];
 
   if (typeof target === 'function') {
     params = Reflect.getMetadata(injectionTypeArgMarker, target) ?? [];
   } else {
     params =
-      Reflect.getMetadata(injectionTypeArgMarker, target, key as keyof typeof target) ??
-      [];
+      Reflect.getMetadata(injectionTypeArgMarker, target as T, key as string) ?? [];
   }
 
   return params.reduce((previousValue, { key, factory }) => {
