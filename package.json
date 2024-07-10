@@ -1,6 +1,6 @@
 {
   "name": "@wdxlab/di",
-  "version": "1.0.0-alpha.7",
+  "version": "1.0.0-alpha.8",
   "description": "Dependency Injection for TypeScript",
   "main": "dist/cjs",
   "module": "dist/esm",

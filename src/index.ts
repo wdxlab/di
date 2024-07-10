@@ -1,7 +1,7 @@
 export {
   Method,
-  MethodGuard,
-  MethodOptions,
+  type MethodGuard,
+  type MethodOptions,
   InjectArg,
   Injectable,
   InjectArgFactory,
@@ -26,6 +26,6 @@ export {
   type FunctionProperties,
   type FunctionPropertyNames,
   type Func,
-  ArgumentsOf,
-  ReturnTypeOf,
+  type ArgumentsOf,
+  type ReturnTypeOf,
 } from './injector';
