@@ -77,9 +77,7 @@ test('onDirectCall', () => {
 
 test('getMethods', () => {
   const foo = new Foo();
-  const methods = getMethods(foo);
-
-  expect([...methods]).toEqual([
+  const expectedMethods = [
     [
       'barMethod',
       {
@@ -127,5 +125,8 @@ test('getMethods', () => {
         },
       },
     ],
-  ]);
+  ];
+
+  expect([...getMethods(foo)]).toEqual(expectedMethods);
+  expect([...getMethods(Foo)]).toEqual(expectedMethods);
 });

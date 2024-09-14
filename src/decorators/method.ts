@@ -38,10 +38,10 @@ export function Method<T, K extends FunctionPropertyNames<T>>(
       options,
     };
     const existing: MethodInfoMap =
-      Reflect.getMetadata(methodsMarker, target) ?? new Map();
+      Reflect.getMetadata(methodsMarker, target.constructor) ?? new Map();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     existing.set(data.name, data as any);
-    Reflect.defineMetadata(methodsMarker, existing, target);
+    Reflect.defineMetadata(methodsMarker, existing, target.constructor);
 
     if (options?.onDirectCall) {
       return {
@@ -57,9 +57,15 @@ export function Method<T, K extends FunctionPropertyNames<T>>(
   };
 }
 
-export function getMethods(target: unknown): MethodInfoMap {
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/no-explicit-any
+export function getMethods(target: any): MethodInfoMap {
   // eslint-disable-next-line @typescript-eslint/ban-types
-  return Reflect.getMetadata(methodsMarker, target as {}) ?? (new Map() as MethodInfoMap);
+  return (
+    Reflect.getMetadata(
+      methodsMarker,
+      typeof target === 'function' ? target : target.constructor,
+    ) ?? (new Map() as MethodInfoMap)
+  );
 }
 
 export function getMethodInfo<T, K extends FunctionPropertyNames<T>>(
