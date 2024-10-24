@@ -65,54 +65,8 @@ export class Injector {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   protected singletonStorage = new Map<Constructor<unknown>, any>();
 
-  static getInstance(): Injector {
-    if (!this.instance) {
-      this.instance = new Injector();
-    }
-
-    return this.instance;
-  }
-
-  static instantiate<T extends Constructor<unknown>>(
-    module: T,
-    mergeInjectableDescription?: InjectableDescription<T>,
-  ): ConstructorResult<T> | null {
-    return this.getInstance().instantiate(module, mergeInjectableDescription);
-  }
-
-  static callMethod<T, K extends FunctionPropertyNames<T>>(
-    target: T,
-    methodName: K,
-    mergeInjectableDescription?: InjectableDescription<Constructor<T>>,
-  ): FunctionProperties<T>[K] extends Func
-    ? ReturnType<FunctionProperties<T>[K]> | null
-    : never {
-    return this.getInstance().callMethod(target, methodName, mergeInjectableDescription);
-  }
-
-  static get<T>(clazz: Constructor<T>): T | null {
-    return this.getInstance().get(clazz);
-  }
-
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  static fn<T extends (...args: any[]) => unknown>(
-    fn: T,
-    params: Array<Constructor<unknown> | DynamicInjectable<Constructor<unknown>>>,
-  ): () => ReturnType<T> {
-    return this.getInstance().fn(fn, params);
-  }
-
-  static clear(): void {
-    this.getInstance().instanceInjectableDescription = new WeakMap();
-    this.getInstance().singletonStorage.clear();
-  }
-
-  protected static instance: Injector;
-
-  protected constructor() {}
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  protected instantiate<T extends Constructor<any>>(
+  instantiate<T extends Constructor<any>>(
     TargetClass: T,
     mergeInjectableDescription?: InjectableDescription<T>,
     debug?: DebugInfo,
@@ -177,7 +131,7 @@ export class Injector {
     return instance;
   }
 
-  protected callMethod<T, K extends FunctionPropertyNames<T>>(
+  callMethod<T, K extends FunctionPropertyNames<T>>(
     target: T,
     methodName: K,
     mergeInjectableDescription?: InjectableDescription<Constructor<T>>,
@@ -211,12 +165,12 @@ export class Injector {
     return methodInfo.descriptor.value!.call(target, ...args);
   }
 
-  protected get<T>(clazz: Constructor<T>): T | null {
+  get<T>(clazz: Constructor<T>): T | null {
     return this.singletonStorage.get(clazz) ?? null;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  protected fn<T extends (...args: any[]) => any>(
+  fn<T extends (...args: any[]) => any>(
     fn: T,
     params: Array<Constructor<unknown> | DynamicInjectable<Constructor<unknown>>>,
   ): () => ReturnType<T> {
@@ -233,15 +187,15 @@ export class Injector {
     };
   }
 
-  protected getParams<T extends Constructor<unknown>>(
+  getParams<T extends Constructor<unknown>>(
     clazz: T,
   ): MapToConstructor<ConstructorParameters<T>>;
-  protected getParams<T, K extends FunctionPropertyNames<T>>(
+  getParams<T, K extends FunctionPropertyNames<T>>(
     instance: T,
     propertyName: K,
   ): Constructor<unknown>[];
 
-  protected getParams(
+  getParams(
     clazzOrInstance: Constructor<unknown> | {},
     propertyName?: string,
   ): Constructor<unknown>[] {
@@ -254,37 +208,16 @@ export class Injector {
     return Reflect.getMetadata('design:paramtypes', clazzOrInstance) ?? [];
   }
 
-  protected getExisting<T extends Constructor<unknown>>(
-    Module: T,
-  ): ConstructorResult<T> | null {
-    const options = getInjectableOptions(Module);
-
-    if (options?.mode === 'singleton') {
-      return this.singletonStorage.get(Module) ?? null;
-    }
-
-    return null;
-  }
-
-  protected handleInstance<T>(Module: Constructor<T>, instance: T): void {
-    const options = getInjectableOptions(Module);
-
-    if (options?.mode === 'singleton') {
-      this.singletonStorage.set(Module, instance);
-    }
-  }
-
-  protected resolveArgs<T extends Constructor<unknown>>(
+  resolveArgs<T extends Constructor<unknown>>(
     Module: T,
     mergeInjectableDescription?: InjectableDescription<Constructor<unknown>>,
   ): ConstructorParameters<T>;
-
-  protected resolveArgs<T, K extends FunctionPropertyNames<T>>(
+  resolveArgs<T, K extends FunctionPropertyNames<T>>(
     instance: T,
     methodName: K,
     mergeInjectableDescription?: InjectableDescription<Constructor<T>>,
   ): ArgumentsOf<T[K]>;
-  protected resolveArgs<T extends Constructor<unknown>>(
+  resolveArgs<T extends Constructor<unknown>>(
     Module: T | ConstructorResult<T>,
     methodName?: string | number | symbol | InjectableDescription<Constructor<unknown>>,
     mergeInjectableDescription?: InjectableDescription<Constructor<unknown>>,
@@ -335,6 +268,31 @@ export class Injector {
         debug,
       );
     });
+  }
+
+  clear(): void {
+    this.instanceInjectableDescription = new WeakMap();
+    this.singletonStorage.clear();
+  }
+
+  protected getExisting<T extends Constructor<unknown>>(
+    Module: T,
+  ): ConstructorResult<T> | null {
+    const options = getInjectableOptions(Module);
+
+    if (options?.mode === 'singleton') {
+      return this.singletonStorage.get(Module) ?? null;
+    }
+
+    return null;
+  }
+
+  protected handleInstance<T>(Module: Constructor<T>, instance: T): void {
+    const options = getInjectableOptions(Module);
+
+    if (options?.mode === 'singleton') {
+      this.singletonStorage.set(Module, instance);
+    }
   }
 
   protected mergeInjectableDescriptions(

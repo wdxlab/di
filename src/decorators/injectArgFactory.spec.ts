@@ -2,7 +2,9 @@ import { Injector } from '../injector';
 import { Injectable } from './injectable';
 import { InjectArgFactory } from './injectArgFactory';
 
-beforeEach(() => Injector.clear());
+const injector = new Injector();
+
+beforeEach(() => injector.clear());
 
 it('should work', () => {
   class Inj {
@@ -17,7 +19,7 @@ it('should work', () => {
     ) {}
   }
 
-  const foo = Injector.instantiate(Foo)!;
+  const foo = injector.instantiate(Foo)!;
 
   expect(foo.inj.some).toBe(123);
 });

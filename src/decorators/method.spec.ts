@@ -3,6 +3,8 @@ import { Injector } from '../injector';
 import { InjectArg } from './injectArg';
 import { Injectable } from './injectable';
 
+const injector = new Injector();
+
 @Injectable()
 class Foo {
   fooMethod(): void {}
@@ -45,31 +47,31 @@ class Foo {
   }
 }
 
-beforeEach(() => Injector.clear());
+beforeEach(() => injector.clear());
 
 test('useGuard', () => {
   const foo = new Foo();
 
-  expect(Injector.callMethod(foo, 'guardedMethod')).toBe(null);
+  expect(injector.callMethod(foo, 'guardedMethod')).toBe(null);
   expect(
-    Injector.callMethod(foo, 'guardedMethod', {
+    injector.callMethod(foo, 'guardedMethod', {
       provides: { foo: 1, bar: 'ok', ok: true },
     }),
   ).toBe(123);
 });
 
 test('onDirectCall', () => {
-  const foo = Injector.instantiate(Foo)!;
-  expect(Injector.callMethod(foo, 'directCallMethod')).toBe(
+  const foo = injector.instantiate(Foo)!;
+  expect(injector.callMethod(foo, 'directCallMethod')).toBe(
     'hooked, undefined, undefined',
   );
   expect(
-    Injector.callMethod(foo, 'directCallMethod', {
+    injector.callMethod(foo, 'directCallMethod', {
       provides: { a: 'ok', b: 'ok' },
     }),
   ).toBe('hooked, ok, ok');
   expect(foo.directCallMethod('ok', 'ok')).toBe('direct call, ok, ok');
-  expect(Injector.instantiate(Foo)!.directCallMethod('ok', 'ok')).toBe(
+  expect(injector.instantiate(Foo)!.directCallMethod('ok', 'ok')).toBe(
     'direct call, ok, ok',
   );
   expect(foo.directCallMethod('foo', 'bar')).toBe('direct call and not ok, foo, bar');

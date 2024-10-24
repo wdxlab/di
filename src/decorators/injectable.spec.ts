@@ -2,7 +2,9 @@ import { Injector } from '../injector';
 import { Injectable } from './injectable';
 import { InjectArg } from './injectArg';
 
-beforeEach(() => Injector.clear());
+const injector = new Injector();
+
+beforeEach(() => injector.clear());
 
 test('singleton', () => {
   @Injectable({ mode: 'singleton' })
@@ -17,8 +19,8 @@ test('singleton', () => {
     ) {}
   }
 
-  const baz1 = Injector.instantiate(Baz)!;
-  const baz2 = Injector.instantiate(Baz)!;
+  const baz1 = injector.instantiate(Baz)!;
+  const baz2 = injector.instantiate(Baz)!;
 
   expect(baz1).toBeInstanceOf(Baz);
   expect(baz2).toBeInstanceOf(Baz);
@@ -52,7 +54,7 @@ describe('useFactory', () => {
       }
     }
 
-    const foo = Injector.instantiate(Foo, {
+    const foo = injector.instantiate(Foo, {
       provides: {
         forBar: 123,
       },
@@ -90,12 +92,12 @@ describe('useFactory', () => {
     }
 
     expect(
-      Injector.instantiate(Foo, {
+      injector.instantiate(Foo, {
         imports: [{ injectable: Bar, provides: { some: 123 } }],
       }),
     ).toBeNull();
 
-    const foo = Injector.instantiate(Foo, {
+    const foo = injector.instantiate(Foo, {
       provides: { ok: 'ok', forBar: 123 },
     })!;
 
@@ -131,21 +133,21 @@ test('useGuard', () => {
   }
 
   let counter = 0;
-  const foo = Injector.instantiate(Foo, {
+  const foo = injector.instantiate(Foo, {
     imports: [{ injectable: Bar, provides: { some: 123 } }],
   })!;
 
   counter++;
-  expect(Injector.instantiate(Foo)).toStrictEqual(foo);
+  expect(injector.instantiate(Foo)).toStrictEqual(foo);
 
   counter++;
-  expect(Injector.instantiate(Foo)).toStrictEqual(null);
-  expect(Injector.instantiate(Foo)).toStrictEqual(null);
+  expect(injector.instantiate(Foo)).toStrictEqual(null);
+  expect(injector.instantiate(Foo)).toStrictEqual(null);
 
   counter = 1;
-  expect(Injector.instantiate(Foo)).toStrictEqual(foo);
+  expect(injector.instantiate(Foo)).toStrictEqual(foo);
 
   counter = 2;
-  expect(Injector.instantiate(Foo, { provides: { ok: false } })).toStrictEqual(null);
-  expect(Injector.instantiate(Foo, { provides: { ok: true } })).toStrictEqual(foo);
+  expect(injector.instantiate(Foo, { provides: { ok: false } })).toStrictEqual(null);
+  expect(injector.instantiate(Foo, { provides: { ok: true } })).toStrictEqual(foo);
 });

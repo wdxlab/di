@@ -43,14 +43,15 @@ class Bar {
     }
 }
 
-const bar = Injector.instantiate(Bar);
+const injector = new Injector();
+const bar = injector.instantiate(Bar);
 
 console.log(bar.sum(1, 2)); // 3
 ```
 
 **‼️ TODO: describe docs below ‼️**
 
-## Static Methods
+## Methods
 
 ### instantiate(module, description?)
 ### callMethod(target, methodName, description?)

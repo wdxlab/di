@@ -2,7 +2,9 @@ import { Injectable } from './decorators/injectable';
 import { InjectArg } from './decorators/injectArg';
 import { Injector } from './injector';
 
-afterEach(() => Injector.clear());
+const injector = new Injector();
+
+afterEach(() => injector.clear());
 
 describe('.fn', () => {
   it('should work', () => {
@@ -20,7 +22,7 @@ describe('.fn', () => {
       readonly some = 'hello';
     }
 
-    const fn = Injector.fn(
+    const fn = injector.fn(
       (simple: Simple, foo: Foo) => {
         return `${simple.some}-${foo.bar.some}-FOO`;
       },
