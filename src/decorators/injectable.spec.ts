@@ -151,3 +151,44 @@ test('useGuard', () => {
   expect(injector.instantiate(Foo, { provides: { ok: false } })).toStrictEqual(null);
   expect(injector.instantiate(Foo, { provides: { ok: true } })).toStrictEqual(foo);
 });
+
+test('useInstance', () => {
+  @Injectable<typeof Foo>({
+    useInstance(instance, decl) {
+      const newInstance = (decl.provides?.instance ?? instance) as Foo;
+
+      if (decl.provides?.value) {
+        newInstance.setValue((decl.provides?.value as number) ?? 0);
+      }
+
+      return decl.provides?.proxy
+        ? new Proxy(instance, {
+            get(target, p): unknown {
+              if (p === 'getValue') {
+                return () => 123;
+              }
+
+              return target[p as keyof typeof target];
+            },
+          })
+        : newInstance;
+    },
+  })
+  class Foo {
+    private value = 0;
+
+    setValue(value: number): void {
+      this.value = value;
+    }
+
+    getValue(): number {
+      return this.value;
+    }
+  }
+
+  expect(injector.instantiate(Foo)!.getValue()).toBe(0);
+  expect(injector.instantiate(Foo, { provides: { value: 3 } })!.getValue()).toBe(3);
+  expect(
+    injector.instantiate(Foo, { provides: { value: 3, proxy: true } })!.getValue(),
+  ).toBe(123);
+});

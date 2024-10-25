@@ -56,6 +56,7 @@ console.log(bar.sum(1, 2)); // 3
 ### instantiate(module, description?)
 ### callMethod(target, methodName, description?)
 ### get(clazz)
+### set(instance)
 ### fn(fn, params)
 ### clear()
 

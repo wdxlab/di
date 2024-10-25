@@ -27,7 +27,14 @@ export type InjectableDescription<T extends Constructor<unknown>> = {
   imports?: Array<DynamicInjectable<Constructor<unknown>>>;
   provides?: { [key: string | symbol]: unknown };
   useFactory?: (declaration: InjectableDescription<T>) => ConstructorResult<T> | null;
-  useGuard?: (instance: unknown, declaration: InjectableDescription<T>) => boolean;
+  useGuard?: (
+    instance: ConstructorResult<T> | null,
+    declaration: InjectableDescription<T>,
+  ) => boolean;
+  useInstance?: (
+    instance: ConstructorResult<T>,
+    declaration: InjectableDescription<T>,
+  ) => ConstructorResult<T>;
 };
 
 export function Injectable<T extends Constructor<unknown>>(

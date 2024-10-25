@@ -80,8 +80,7 @@ export class Injector {
       imports: [],
       provides: {},
     };
-    const useFactory = existingInjectableDescription.useFactory;
-    const useGuard = existingInjectableDescription.useGuard;
+    const { useFactory, useGuard, useInstance } = existingInjectableDescription;
 
     if (mergeInjectableDescription) {
       existingInjectableDescription = this.mergeInjectableDescriptions(
@@ -95,13 +94,17 @@ export class Injector {
     if (existing) {
       if (useGuard) {
         if (useGuard(existing, existingInjectableDescription)) {
-          return existing;
+          return useInstance
+            ? useInstance(existing, existingInjectableDescription)
+            : existing;
         }
 
         return null;
       }
 
-      return existing;
+      return useInstance
+        ? useInstance(existing, existingInjectableDescription)
+        : existing;
     }
 
     if (useGuard) {
@@ -128,7 +131,9 @@ export class Injector {
     this.instanceInjectableDescription.set(instance, existingInjectableDescription);
     this.handleInstance(TargetClass, instance);
 
-    return instance;
+    return useInstance && instance
+      ? useInstance(instance, existingInjectableDescription)
+      : instance;
   }
 
   callMethod<T, K extends FunctionPropertyNames<T>>(
@@ -167,6 +172,10 @@ export class Injector {
 
   get<T>(clazz: Constructor<T>): T | null {
     return this.singletonStorage.get(clazz) ?? null;
+  }
+
+  set(instance: object): void {
+    this.singletonStorage.set(instance.constructor as Constructor<unknown>, instance);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
