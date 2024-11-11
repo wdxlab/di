@@ -9,6 +9,7 @@ import {
   isInjectable,
 } from './decorators/injectable';
 import { getInjectionParamFactories } from './decorators/injectArgFactory';
+import { getGuards } from './decorators/useGuard';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Func = (...args: any[]) => any;
@@ -157,9 +158,10 @@ export class Injector {
     );
 
     const args = this.resolveArgs(target, methodName, injectableDescription);
+    const methodGuards = getGuards(target, methodName);
 
-    if (methodInfo?.options?.useGuard) {
-      if (!methodInfo.options.useGuard(target, args, injectableDescription)) {
+    for (const guard of methodGuards) {
+      if (!guard(target, args, injectableDescription)) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return null as any;
       }

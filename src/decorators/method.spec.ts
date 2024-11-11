@@ -2,6 +2,8 @@ import { getMethods, Method } from './method';
 import { Injector } from '../injector';
 import { InjectArg } from './injectArg';
 import { Injectable } from './injectable';
+import { UseGuard } from './useGuard';
+import { OnDirectCall } from './onDirectCall';
 
 const injector = new Injector();
 
@@ -12,15 +14,13 @@ class Foo {
   @Method()
   barMethod(): void {}
 
-  @Method({ meta: 'meta' })
+  @Method({ meta: { some: 'value' } })
   bazMethod(): void {}
 
-  @Method<Foo, 'guardedMethod'>({
-    useGuard: (instance, args, decl) => {
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      return instance.fooMethod && args[1] === 'ok' && decl.provides?.ok === true;
-    },
+  @UseGuard<Foo, 'guardedMethod'>((instance, args, decl) => {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    return instance.fooMethod && args[1] === 'ok' && decl.provides?.ok === true;
   })
   guardedMethod(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -31,12 +31,11 @@ class Foo {
     return 123;
   }
 
-  @Method<Foo, 'directCallMethod'>({
-    onDirectCall: (a, b) =>
-      a === 'ok' && b === 'ok'
-        ? `direct call, ${a}, ${b}`
-        : `direct call and not ok, ${a}, ${b}`,
-  })
+  @OnDirectCall<Foo, 'directCallMethod'>((_, a, b) =>
+    a === 'ok' && b === 'ok'
+      ? `direct call, ${a}, ${b}`
+      : `direct call and not ok, ${a}, ${b}`,
+  )
   directCallMethod(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     @InjectArg('a') a: string,
@@ -84,7 +83,7 @@ test('getMethods', () => {
       'barMethod',
       {
         name: 'barMethod',
-        options: undefined,
+        options: { meta: {} },
         descriptor: Object.getOwnPropertyDescriptor(
           Object.getPrototypeOf(foo),
           'barMethod',
@@ -95,7 +94,7 @@ test('getMethods', () => {
       'bazMethod',
       {
         name: 'bazMethod',
-        options: { meta: 'meta' },
+        options: { meta: { some: 'value' } },
         descriptor: Object.getOwnPropertyDescriptor(
           Object.getPrototypeOf(foo),
           'bazMethod',
@@ -106,7 +105,7 @@ test('getMethods', () => {
       'guardedMethod',
       {
         name: 'guardedMethod',
-        options: { useGuard: expect.any(Function) },
+        options: { meta: {} },
         descriptor: Object.getOwnPropertyDescriptor(
           Object.getPrototypeOf(foo),
           'guardedMethod',
@@ -117,7 +116,7 @@ test('getMethods', () => {
       'directCallMethod',
       {
         name: 'directCallMethod',
-        options: { onDirectCall: expect.any(Function) },
+        options: { meta: {} },
         descriptor: {
           ...Object.getOwnPropertyDescriptor(
             Object.getPrototypeOf(foo),

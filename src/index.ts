@@ -1,6 +1,5 @@
 export {
   Method,
-  type MethodGuard,
   type MethodOptions,
   InjectArg,
   Injectable,
@@ -18,6 +17,11 @@ export {
   type InjectionFactoryFn,
   type MethodInfo,
   type DynamicInjectable,
+  UseGuard,
+  getGuards,
+  type MethodGuard,
+  OnDirectCall,
+  type DirectCallHandler,
 } from './decorators';
 export {
   Injector,

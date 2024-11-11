@@ -84,3 +84,13 @@ Parameter decorator
 Method decorator
 
 #### getMethods(target)
+
+### OnDirectCall(handler)
+
+Method decorator
+
+### UseGuard(guard)
+
+Method decorator
+
+#### getUseGuards

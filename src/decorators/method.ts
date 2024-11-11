@@ -1,13 +1,12 @@
 import 'reflect-metadata';
-import { Constructor, InjectableDescription } from './injectable';
-import { ArgumentsOf, Func, FunctionPropertyNames, ReturnTypeOf } from '../injector';
+import { ArgumentsOf, Func, FunctionPropertyNames } from '../injector';
 
 const methodsMarker = Symbol.for('wdxlab.di.decorators.methods');
 
 export type MethodInfo<T, K extends FunctionPropertyNames<T>> = {
-  name: string;
+  name: string | symbol;
   descriptor: TypedPropertyDescriptor<(...args: ArgumentsOf<T[K]>) => unknown>;
-  options?: MethodOptions<T, K>;
+  options: MethodOptions;
 };
 
 type MethodInfoMap = Map<
@@ -15,45 +14,31 @@ type MethodInfoMap = Map<
   MethodInfo<Record<string, Func>, FunctionPropertyNames<Record<string, Func>>>
 >;
 
-export type MethodGuard<T, K extends FunctionPropertyNames<T>> = (
-  instance: T,
-  args: ArgumentsOf<T[K]>,
-  decl: InjectableDescription<Constructor<T>>,
-) => boolean;
-export type MethodOptions<T, K extends FunctionPropertyNames<T>> = {
-  useGuard?: MethodGuard<T, K>;
-  onDirectCall?: (...args: ArgumentsOf<T[K]>) => ReturnTypeOf<T, K>;
-  meta?: unknown;
+export type MethodOptions = {
+  meta: Record<string | number | symbol, unknown>;
 };
 
 export function Method<T, K extends FunctionPropertyNames<T>>(
-  options?: MethodOptions<T, K>,
+  options?: MethodOptions,
 ): MethodDecorator {
   return (target, key, descriptor) => {
-    const data: MethodInfo<T, K> = {
-      name: key as string,
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      descriptor: descriptor,
-      options,
-    };
     const existing: MethodInfoMap =
       Reflect.getMetadata(methodsMarker, target.constructor) ?? new Map();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    existing.set(data.name, data as any);
-    Reflect.defineMetadata(methodsMarker, existing, target.constructor);
 
-    if (options?.onDirectCall) {
-      return {
-        ...descriptor,
-        value: function (...args: ArgumentsOf<T[K]>): unknown {
-          return options.onDirectCall!.call(this, ...args);
-        },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } as any;
+    if (!existing.has(key)) {
+      const data: MethodInfo<T, K> = {
+        name: key,
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        descriptor,
+        options: { ...options, meta: { ...options?.meta } },
+      };
+      existing.set(data.name, data);
+    } else if (options?.meta) {
+      Object.assign(existing.get(key)!.options.meta, options.meta);
     }
 
-    return;
+    Reflect.defineMetadata(methodsMarker, existing, target.constructor);
   };
 }
 
